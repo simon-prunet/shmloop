@@ -1,7 +1,7 @@
 import numpy as np
 from multiprocessing import Pool, shared_memory, cpu_count
 import tracemalloc
-from time import sleep
+from time import sleep, perf_counter
 
 default_nprocs = cpu_count()
 
@@ -20,15 +20,17 @@ def create_memory_block(lin_size=512,seed=123,shared=True):
     return a
 
 
-def slow_mean_shared(shm_name,lin_size,sl):
+def slow_mean_shared(shm_name,lin_size,sl,slp=None):
 
   shm = shared_memory.SharedMemory(shm_name)
   a = np.ndarray(shape=(lin_size,lin_size,lin_size),dtype='float64',buffer=shm.buf)
-  sleep(0.01)
+  if slp is not None:
+    sleep(slp)
   return a[sl].mean()
 
-def slow_mean(arr,lin_size,sl):
-  sleep(0.01)
+def slow_mean(arr,lin_size,sl,slp=None):
+  if slp is not None:
+    sleep(slp)
   return arr[sl].mean()
 
 def distribute(nitems, nprocs=None):
@@ -52,6 +54,7 @@ def doit(lin_size=256,shared=True,nprocs=None):
   slices = distribute(lin_size,nprocs)
 
   tracemalloc.start()
+  t1 = perf_counter()
   if (shared):
     results = [pool.apply_async(slow_mean_shared,(shm.name,lin_size,sl)) for sl in slices]
   else:
@@ -59,9 +62,11 @@ def doit(lin_size=256,shared=True,nprocs=None):
   # Copy results into single array
   for i,r in enumerate(results):
     res[i] = r.get()
+  t2 = perf_counter()
 
   print("Allocated memory: current %d peak %d"%tracemalloc.get_traced_memory())
-  print (res)
+  print("Execution time = %f"%(t2-t1))
+  #print (res)
   tracemalloc.stop()
 
 
