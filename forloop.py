@@ -26,7 +26,9 @@ def slow_mean_shared(shm_name,lin_size,sl,slp=None):
   a = np.ndarray(shape=(lin_size,lin_size,lin_size),dtype='float64',buffer=shm.buf)
   if slp is not None:
     sleep(slp)
-  return a[sl].mean()
+  res = a[sl].mean()
+  shm.close()
+  return(res)
 
 def slow_mean(arr,lin_size,sl,slp=None):
   if slp is not None:
@@ -68,6 +70,8 @@ def doit(lin_size=256,shared=True,nprocs=None):
   print("Execution time = %f"%(t2-t1))
   #print (res)
   tracemalloc.stop()
-
+  if (shared):
+    shm.close()
+    shm.unlink()
 
 
